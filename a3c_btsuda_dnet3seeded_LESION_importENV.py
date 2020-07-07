@@ -10,7 +10,6 @@ import itertools
 import sys
 sys.path.append('/home/btsuda/code') #need env file ('WCST_env_inarow.py') somewhere; here it is in /home/btsuda/code/python_modules/
 from python_modules import WCST_env_inarow as We #normal WCST deck
-#from python_modules import WCST_env_inarow_wm as We #use this for MWCST deck (no ambiguous cards)
 
 ###Misc functions
 #Function to specify which gpu to use
@@ -1709,13 +1708,14 @@ mdeck = list(itertools.permutations(cchars,3))
 if useFD==0:
 	if RNDMSD==None:
 		training_deck_indices = [item for item in range(len(fdeck))]
+# 	else: #if wanted to train with part of deck and test on rest of deck -- if uncomment, then need to uncomment corresponding in WCST_env_inarow.py file
+# 		np.random.seed(RNDMSD)
+# 		training_deck_indices = [item for item in np.random.choice(range(len(fdeck)),round(len(fdeck)*2/3),replace=False)] #list of which cards to use for training
+# 		np.random.seed(None)
 	else:
-		np.random.seed(RNDMSD)
-		training_deck_indices = [item for item in np.random.choice(range(len(fdeck)),round(len(fdeck)*2/3),replace=False)] #list of which cards to use for training
-		np.random.seed(None)
+		print('Error: Not configured for split train-testing deck; please uncomment relevant areas')
 else:
 	training_deck_indices = [item for item in range(len(mdeck))]
-
 
 #create central_network
 central_network = the_network(state_space=STATE_SPACE, action_space=ACTION_SPACE, name='central_network', trainer=None)
