@@ -8,8 +8,9 @@ import os
 import multiprocessing
 import itertools
 import sys
-sys.path.append('/home/btsuda/code')
-from python_modules import WCST_env_inarow as We
+sys.path.append('/home/btsuda/code') #need env file ('WCST_env_inarow.py') somewhere; here it is in /home/btsuda/code/python_modules/
+from python_modules import WCST_env_inarow as We #normal WCST deck
+#from python_modules import WCST_env_inarow_wm as We #use this for MWCST deck (no ambiguous cards)
 
 ###Misc functions
 #Function to specify which gpu to use
@@ -29,7 +30,6 @@ def set_gpu(gpu, frac):
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=frac)
     return gpu_options
-
 
 #create fxn that allows worker to make a working copy of the central_network
 def get_network_vars(from_scope,to_scope):
@@ -57,16 +57,6 @@ def resetzero_network_vars(from_scope,to_scope):
         op_holder.append(to_var.assign(from_var)) #assign the from_scope value to the to_scope value and append it to op_holder 
     return op_holder #returns the from_scope values in a list
 
-# def gradient_stopper(varis,vm):
-# 	v_mask = tf.constant(vm,dtype=tf.float32)
-# 	v_mask_h = tf.abs(v_mask-1)
-# 	vnew = []
-# 	vnew.append(varis[0])
-# 	vnew.append(varis[1])
-# 	vnew.append(varis[2])
-# 	vnew.append(tf.stop_gradient(tf.multiply(v_mask_h,varis[3])) + tf.multiply(v_mask,varis[3]))
-# 	return vnew
-
 def worker_choose_action(policy_rec):
 	action_chosen_index = np.argmax(policy_rec) #choose action with highest prob
 	action_chosen = np.zeros(policy_rec.shape[1])
@@ -82,7 +72,6 @@ def worker_decide(decision,pr_list):
 	action_chosen = worker_choose_action(chosen_policy)
 	return(action_chosen) #1-hot action vector
 
-
 #worker has a fxn to discount rewards - he'll save rewards as is until he needs to calculate gradients at the end of
 #the episode, then he'll calculate the discounted rewards looking from each state to end of ep
 #and use these as the rewards for the advantage calculation in defining the loss function (policy and value loss components
@@ -96,7 +85,7 @@ def worker_decide(decision,pr_list):
 def worker_discount(x, gamma):
     return scipy.signal.lfilter([1], [1, -gamma], x[::-1], axis=0)[::-1]
 
-
+#function that tells which expert networks could be used for which cards (see Tsuda et al. 2020 Results - pretrained case)
 def env2_nshould(cards,decisions):
 	sn1 = 0 #all cards when could use n1 to solve
 	sn2 = 0 #all cards when could use n2 to solve
@@ -144,29 +133,10 @@ def env2_nshould(cards,decisions):
 				n2wN += 1
 			else:
 				n3wN += 1
-	# if sn1 != 0:
-	# 	n1ws = n1ws/sn1
-	# else:
-	# 	n1ws = 'NaN'
-	# if sn2 != 0:
-	# 	n2ws = n2ws/sn2
-	# else:
-	# 	n2ws = 'NaN'
-	# if (sn1+sn2) != 0:
-	# 	n3wsn = n3wsn/(sn1+sn2)
-	# else:
-	# 	n3wsn = 'NaN'
-	# if sN != 0:
-	# 	n1wN = n1wN/sN
-	# 	n2wN = n2wN/sN
-	# 	n3wN = n3wN/sN
-	# else:
-	# 	n1wN = 'NaN'
-	# 	n2wN = 'NaN'
-	# 	n3wN = 'NaN'
-
+				
 	return sn1, n1ws, n1wsn2, n1wN, sn2, n2ws, n2wsn1, n2wN, sN, n3wsn1, n3wsn2, n3wN
 
+#function that tells which rules were matched on a given card sort (for ambiguous cards this can be more than one rule; for unambiguous it can only be one)
 def rule_matcher(cards,actions): #cards is an np.array nx3 (shape,color,number) and actions is an np.array nx1 (which stack 0-3)
 	rulems = np.zeros(shape=[len(actions),4])
 	for i in range(len(actions)):
@@ -178,9 +148,9 @@ def rule_matcher(cards,actions): #cards is an np.array nx3 (shape,color,number) 
 
 ###
 
-#central network that goal is to optimize to task
+#central network's goal is to optimize to task
 #recruit bunch of workers to help
-	#work process: each worker takes a copy of the network as they get to it, go explore in environment using it
+	#work process: each worker takes a copy of the network as they get to work; go explore in environment using the copy
 	#based on their experience in environment, calculate updates they would make
 	#send the updates back to the central network - central network applies them; applies from each worker
 	#when worker send in update recommendations, worker also tosses copy of network and takes new copy of newest version
@@ -196,6 +166,8 @@ class the_network():
 
 			#placeholder for inputs
 			self.inputs = tf.placeholder(shape=[None,state_space],dtype=tf.float32) #environmental inputs (first just inputs from state status)
+			
+			#if no lesion, LTYPE = 0
 			if LTYPE==1: #input of previous reward is lost
 				input_L = tf.constant([1,1,1,1,0],shape=[1,state_space],dtype=tf.float32)
 			elif LTYPE==2: #input of previous reward is lost
@@ -203,10 +175,9 @@ class the_network():
 			elif LTYPE==3: #input of previous reward is lost
 				input_L = tf.constant([1,1,1,0,0],shape=[1,state_space],dtype=tf.float32)
 			else:
-				input_L = tf.constant([1,1,1,1,1],shape=[1,state_space],dtype=tf.float32)
+				input_L = tf.constant([1,1,1,1,1],shape=[1,state_space],dtype=tf.float32) #aka don't do anything to inputs
 			self.inputs_p = tf.multiply(input_L, self.inputs)
 			rnn_in = tf.expand_dims(self.inputs_p,[0])
-
 
 			# network 1 (n1)
 			with tf.variable_scope('n1'):
@@ -214,8 +185,6 @@ class the_network():
 				n1_sizeoflstmcell = NETSZ_E
 				#print("n1_LSTM has " + str(n1_sizeoflstmcell) + " neurons")
 				n1_lstm = tf.contrib.rnn.BasicLSTMCell(n1_sizeoflstmcell,state_is_tuple=True) #inputs feed to lstm cell
-				#reformats inputs so can go into LSTM
-				#n1_rnn_in = tf.expand_dims(self.inputs,[0])
 				#define the lstm states ct and ht
 				n1_c_start = np.zeros((1,n1_lstm.state_size.c), np.float32)
 				n1_h_start = np.zeros((1,n1_lstm.state_size.h), np.float32)
@@ -277,9 +246,6 @@ class the_network():
 					n1_local_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, self.name+'/n1')
 					self.n1_gradient_loss = tf.gradients(n1_Total_loss,n1_local_vars) #worker will send these gradients (recommended updates) to central_network's gradient_list
 
-
-					#gradient clipping with clipping norm of 40.0
-					#grads_to_apply, _ = tf.clip_by_global_norm(self.gradient_loss, 40.0)
 					n1_grads_to_apply = self.n1_gradient_loss
 
 					#worker can then apply the gradients to the central_network
@@ -292,8 +258,6 @@ class the_network():
 				n2_sizeoflstmcell = NETSZ_E
 				#print("n2_LSTM has " + str(n2_sizeoflstmcell) + " neurons")
 				n2_lstm = tf.contrib.rnn.BasicLSTMCell(n2_sizeoflstmcell,state_is_tuple=True) #inputs feed to lstm cell
-				#reformats inputs so can go into LSTM
-				#n2_rnn_in = tf.expand_dims(self.inputs,[0])
 				#define the lstm states ct and ht
 				n2_c_start = np.zeros((1,n2_lstm.state_size.c), np.float32)
 				n2_h_start = np.zeros((1,n2_lstm.state_size.h), np.float32)
@@ -355,9 +319,6 @@ class the_network():
 					n2_local_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, self.name+'/n2')
 					self.n2_gradient_loss = tf.gradients(n2_Total_loss,n2_local_vars) #worker will send these gradients (recommended updates) to central_network's gradient_list
 
-
-					#gradient clipping with clipping norm of 40.0
-					#grads_to_apply, _ = tf.clip_by_global_norm(self.gradient_loss, 40.0)
 					n2_grads_to_apply = self.n2_gradient_loss
 
 					#worker can then apply the gradients to the central_network
@@ -370,8 +331,6 @@ class the_network():
 				n3_sizeoflstmcell = NETSZ_E
 				#print("n3_LSTM has " + str(n3_sizeoflstmcell) + " neurons")
 				n3_lstm = tf.contrib.rnn.BasicLSTMCell(n3_sizeoflstmcell,state_is_tuple=True) #inputs feed to lstm cell
-				#reformats inputs so can go into LSTM
-				#n3_rnn_in = tf.expand_dims(self.inputs,[0])
 				#define the lstm states ct and ht
 				n3_c_start = np.zeros((1,n3_lstm.state_size.c), np.float32)
 				n3_h_start = np.zeros((1,n3_lstm.state_size.h), np.float32)
@@ -433,9 +392,6 @@ class the_network():
 					n3_local_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, self.name+'/n3')
 					self.n3_gradient_loss = tf.gradients(n3_Total_loss,n3_local_vars) #worker will send these gradients (recommended updates) to central_network's gradient_list
 
-
-					#gradient clipping with clipping norm of 40.0
-					#grads_to_apply, _ = tf.clip_by_global_norm(self.gradient_loss, 40.0)
 					n3_grads_to_apply = self.n3_gradient_loss
 
 					#worker can then apply the gradients to the central_network
@@ -513,30 +469,14 @@ class the_network():
 
 					self.dnet_gradient_loss = tf.gradients(dnet_Total_loss,dnet_local_vars) #worker will send these gradients (recommended updates) to central_network's gradient_list
 
-					#gradient clipping with clipping norm of 40.0
-					#grads_to_apply, _ = tf.clip_by_global_norm(self.gradient_loss, 40.0)
 					dnet_grads_to_apply = self.dnet_gradient_loss
-					# dgl3_zeros = tf.map_fn(lambda x: x*0, self.dnet_gradient_loss[3])
-					# dgl2_zeros = tf.map_fn(lambda x: x*0, self.dnet_gradient_loss[2])
-					# dgl1_zeros = tf.map_fn(lambda x: x*0, self.dnet_gradient_loss[1])
-					# dgl0_zeros = tf.map_fn(lambda x: x*0, self.dnet_gradient_loss[0])
-					# dnet_grads_to_apply = [dgl0_zeros,dgl1_zeros,dgl2_zeros,dgl3_zeros]
-					# dnet_grads_to_apply = [self.dnet_gradient_loss[0],self.dnet_gradient_loss[1],self.dnet_gradient_loss[2],dgl3_zeros]
-					# self.dgta = dnet_grads_to_apply
 
 					#worker can then apply the gradients to the central_network
 					dnet_global_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, 'central_network/dnet')
 
-					# self.tgm = [dnet_grads_to_apply[3:4][0] * tf.reshape(tf.cast(np.transpose(v_mask), dtype=dnet_grads_to_apply[3:4][0].dtype),[dnet_sizeoflstmcell,1])]
-					# self.tgm0 = self.tgm[0]
-
 					self.dnet_apply_gradients = trainer.apply_gradients(zip(dnet_grads_to_apply,dnet_global_vars))
-					# self.dnet_apply_gradients_0 = trainer.apply_gradients(zip(dnet_grads_to_apply[0:3],dnet_global_vars[0:3]))
-					# self.dnet_apply_gradients_1 = trainer.apply_gradients([(self.tgm[0], dnet_global_vars[3:4][0])])
-					# self.checker_gradvar = [(self.tgm[0], dnet_global_vars[3:4][0])]
 
 					self.gv = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, 'central_network')
-
 
 
 			#central network isn't held by a worker - doesn't need to calculate loss and gradient; each worker has to do this
@@ -547,7 +487,6 @@ class the_network():
 			#this is a section of the network that only workers have - it takes the data they've collected from an episode and
 			# uses it to calculate losses and from these, gradients for each parameter (weight)
 			# the worker will then send these gradients to the central network and apply them to tune it
-
 
 #worker can only be created if there is a global the_network object defined called central_network and a global variables
 #defined: GLOBAL_EPISODE_COUNTER, STATE_SPACE, ACTION_SPACE, GAMMA, MAX_EPISODE_LEN
@@ -562,16 +501,13 @@ class worker():
 		self.working_copy_network_params = get_network_vars('central_network',self.name)
 		self.default_graph = tf.get_default_graph()
 		self.wtl = 'w'
-		self.wtl2 = 'w'
-		self.wtl3 = 'w'
 		self.writestatus = 'w'
-		self.writestatus2 = 'w'
 		self.assesser = []
 
 
 	#when episode is done, worker gathers data and processes it
 	#passes processed data to his own network to calculate gradients
-	#applies those gradients to the central_netwokr
+	#applies those gradients to the central_network
 	#bootstrap value is 0 if episode ended in terminal state; V(s_n+1) if episode was cut off in state s_n+1
 		#i.e. worker was in s_n and did action a_n to move to s_n+1, then episode was cut because exceed max length
 	def train(self,training_data,bootstrap_value,gamma,sess):
@@ -587,8 +523,6 @@ class worker():
 		array_training_data[:,3] = discR_listed
 
 		stacked_states = np.vstack(array_training_data[:,0])
-		#stacked_ch_in_0 = np.vstack([item[0] for item in array_training_data[:,1]])
-		#stacked_ch_in_1 = np.vstack([item[1] for item in array_training_data[:,1]])
 		stacked_action = np.vstack(array_training_data[:,2])
 		stacked_reward = np.vstack(array_training_data[:,3])
 		stacked_decision = np.vstack(array_training_data[:,6])
@@ -605,13 +539,6 @@ class worker():
 					self.working_copy_network.n1_apply_gradients],
 					feed_dict=feed_dict)
 
-				if self.name=='workern10':
-					with open(traindatapath + '_n1_actiondist.csv',self.wtl) as file:
-						ad = np.sum(stacked_action,axis=0)
-						file.write(','.join([str(x) for x in ad]) + '\n')
-					if self.wtl=='w':
-						self.wtl='a'
-
 			elif self.actorenv==[1]: #if training network 2 on color-sorting
 				feed_dict = {self.working_copy_network.inputs:stacked_states,
 					self.working_copy_network.n2_state_in[0]:self.n2_train_rnn_state[0],
@@ -622,13 +549,6 @@ class worker():
 					self.working_copy_network.n2_gradient_loss,
 					self.working_copy_network.n2_apply_gradients],
 					feed_dict=feed_dict)
-
-				if (self.name=='workern20'):
-					with open(traindatapath + '_n2_actiondist.csv',self.wtl) as file:
-						ad = np.sum(stacked_action,axis=0)
-						file.write(','.join([str(x) for x in ad]) + '\n')
-					if self.wtl=='w':
-						self.wtl='a'
 
 			elif self.actorenv==[2]: #if training network 2 on color-sorting
 				feed_dict = {self.working_copy_network.inputs:stacked_states,
@@ -641,14 +561,6 @@ class worker():
 					self.working_copy_network.n3_apply_gradients],
 					feed_dict=feed_dict)
 
-				if (self.name=='workern30'):
-					with open(traindatapath + '_n3_actiondist.csv',self.wtl) as file:
-						ad = np.sum(stacked_action,axis=0)
-						file.write(','.join([str(x) for x in ad]) + '\n')
-					if self.wtl=='w':
-						self.wtl='a'
-
-
 		elif TO_TRAIN=='DNET':
 			feed_dict = {self.working_copy_network.inputs:stacked_states,
 				self.working_copy_network.dnet_state_in[0]:self.dnet_train_rnn_state[0],
@@ -656,31 +568,11 @@ class worker():
 				self.working_copy_network.dnet_D:stacked_decision,
 				self.working_copy_network.dnet_R:stacked_reward}
 			self.dnet_train_rnn_state, gv, _ = sess.run([self.working_copy_network.dnet_state_out,
-				# self.working_copy_network.checker_gradvar,
 				self.working_copy_network.gv,
-				# self.working_copy_network.dgta,
-				# self.working_copy_network.tgm,
-				# self.working_copy_network.tgm0,
-				# self.working_copy_network.dnet_gradient_loss,
-				# self.working_copy_network.dnet_apply_gradients_0,
 				self.working_copy_network.dnet_apply_gradients],
 				feed_dict=feed_dict)
 
 			sess.run(resetzero_network_vars('central_network','central_network'))
-
-			print(self.name+'TRAIN TRAIN TRAIN ---------------------')
-			# print('v_mask',np.transpose(v_mask[0:10,]))
-			# print('gta',dgta[3][0:10,])
-			# print('tgm',tgm[0][0:10,])
-			# print('tgm0',tgm0[0:10,])
-			print(len(gv))
-			print(gv[12].shape)
-			print(gv[13].shape)
-			print(gv[14].shape)
-			print(gv[15].shape)
-			print('weights',gv[15][0:10,])
-			print('piweights',gv[14][0:10,])
-			# print('checker_gdvr',chekr[0][0][1:10],chekr[0][1][1:10])
 
 			if self.name=='workerd0':
 				with open(traindatapath + '_dnet_decisiondist.csv',self.wtl) as file:
@@ -693,8 +585,6 @@ class worker():
 					file.write(','.join([str(x) for x in yoho]) + '\n')
 				if self.wtl=='w':
 					self.wtl='a'
-
-
 
 		elif TO_TRAIN=='DNETAllExpert':
 			coded_decision = [np.argmax(item) for item in stacked_decision] #0,1,2 for n1, n2, n3
@@ -831,7 +721,6 @@ class worker():
 		if self.actorenv==[4]:
 			just_trained = True
 
-
 	def get_experience(self,sess,coord,env_p=[1/3,1/3,1/3],NUM_TRAIN_EPS=1000,on_ep=True):
 		print ("Starting " + self.name)
 		global GLOBAL_EPISODE_COUNTER, NUMBER_OF_WORKERS, TO_TRAIN, WHICH_DNET, TRAIN_EP_COUNT, eprs, last400ep, train_to_profst, avecorthresh, aveover
@@ -952,7 +841,6 @@ class worker():
 	                                        #when episode==done
 					        #train processes the training data then runs it through the worker's network to calculate gradients,
 					        #calculates gradients, then takes these to the central_network and uses them to update the central_network
-									
 
 					elif self.actorenv==[1]:
 						n2_ch_state_in = self.working_copy_network.n2_lstm_state_init #defines ch_state_in as zeros
@@ -1128,7 +1016,6 @@ class worker():
 					        #train processes the training data then runs it through the worker's network to calculate gradients,
 					        #calculates gradients, then takes these to the central_network and uses them to update the central_network
 
-				
 				elif TO_TRAIN=='DNET': #if getting experience for the decision network training or the newexpert n3
 					dnet_ch_state_in = self.working_copy_network.dnet_lstm_state_init #defines ch_state_in as zeros
 					self.dnet_train_rnn_state = dnet_ch_state_in #to do training need to create this self variable to pass the LSTM state in and out
@@ -1155,10 +1042,6 @@ class worker():
 							feed_dict={self.working_copy_network.inputs:s_cur,
 							self.working_copy_network.dnet_state_in[0]:dnet_ch_state_in[0],
 							self.working_copy_network.dnet_state_in[1]:dnet_ch_state_in[1]})
-
-						# if self.name=='workerd0':
-						# 	print(self.name+': global vars 15')
-						# 	print(lv[3][0:10])
 
 						#get the expert networks (1 & 2) policy rec and LSTM states to continue passing
 						n1pr, n2pr, n3pr, n1_ch_state_out, n2_ch_state_out, n3_ch_state_out = sess.run([self.working_copy_network.n1_policy_layer_output,
@@ -1217,8 +1100,6 @@ class worker():
 						
 						if ep_term==True:
 							if self.name=='workerd0':
-								# print(self.name+': global vars 15')
-								# print(lv[3][0:10])
 								with open(traindatapath + '_dnet_numcorrect.csv',self.writestatus) as file:
 									file.write(str(num_correct)+'\n')
 								with open(traindatapath + '_dnet_eplengths.csv',self.writestatus) as file:
@@ -1369,7 +1250,6 @@ class worker():
 							prevenvtype = self.env.envtype
 							self.env = We.make_new_env(last_ep_type=prevenvtype,actorenv=self.actorenv,status='train',set_start_state=s_cur,training_deck_indices=training_deck_indices) #for each ep make a new env obj to get new baseline probs of A and B
 
-
                                         #when episode==done
 				        #train processes the training data then runs it through the worker's network to calculate gradients,
 				        #calculates gradients, then takes these to the central_network and uses them to update the central_network
@@ -1377,9 +1257,7 @@ class worker():
 				if stop_training==True:
 					coord.request_stop()
 
-				if self.name=='workerd0':
-					self.train(training_data,bootstrap_value,GAMMA,sess)
-
+				self.train(training_data,bootstrap_value,GAMMA,sess)
 
 				if self.actorenv==[4]:
 					TRAIN_EP_COUNT += 1
@@ -1393,7 +1271,6 @@ class worker():
 						print('GBC: ' + str(GLOBAL_EPISODE_COUNTER))
 					if GLOBAL_EPISODE_COUNTER >= EPS_TO_TRAIN_ON:
 						coord.request_stop()
-
 
 				#while using_workers_to_optimize is still True, go back to start, i.e. start a new episode
 				#go get copy of most uptodate central_network (post applying the latest gradient update) and have at it again
@@ -1604,10 +1481,6 @@ class worker():
 					n2_ch_state_in = self.working_copy_network.n2_lstm_state_init #defines ch_state_in as zeros
 					n3_ch_state_in = self.working_copy_network.n3_lstm_state_init #defines ch_state_in as zeros
 
-					# dn1 = 0
-					# dn2 = 0
-					# dn3 = 0
-
 					test_trial_num = 0
 					trial_to_train_on = getnumep
 					num_correct = 0
@@ -1664,12 +1537,6 @@ class worker():
 						new_step_in_environment = [s_cur, dnet_ch_state_in, d_cur, r_cur, s_new, ep_term, np.where(a_cur==1)[0]]
 						training_data.append(new_step_in_environment) #this is the data to calculate gradients with
 
-						# if np.argmax(d_cur)==0:
-						# 	dn1 += 1
-						# elif np.argmax(d_cur)==1:
-						# 	dn2 += 1
-						# else:
-						# 	dn3 += 1
 						s_cur = s_new
 						dnet_ch_state_in = dnet_ch_state_out
 						n1_ch_state_in = n1_ch_state_out
@@ -1695,24 +1562,10 @@ class worker():
 							with open(fileroot + '_decisiondist.csv',self.writestatus) as file:
 								file.write(','.join([str(x) for x in dd]) + '\n')
 
-							# if self.env.envtype==0: #if env 0
-							# 	correctrate = dn1/ep_steps
-							# elif self.env.envtype==1:
-							# 	correctrate = dn2/ep_steps
-							# else:
-							# 	correctrate = float('nan')
-
 							with open(fileroot + '_numcorrect.csv',self.writestatus) as file:
 								file.write(str(num_correct)+'\n')
 							with open(fileroot + '_eplengths.csv',self.writestatus) as file:
 								file.write(str(ep_steps)+'\n')
-							# with open(fileroot + '_nwhen.csv',self.writestatus) as file:
-							# 	file.write(','.join([str(x) for x in nwhen]) + '\n')
-							# with open(fileroot + '_correctDrate.csv',self.writestatus) as file:
-							# 	file.write(str(correctrate))
-							# if (test_onwhom==[None]) | (len(test_onwhom)==2):
-							# 	with open(fileroot + '_trialtype.csv',self.writestatus) as file:
-							# 		file.write(str(self.env.envtype))
 							if self.writestatus == 'w': #if first episode just ended open new files
 								self.writestatus = 'a'
 
@@ -1753,34 +1606,44 @@ class worker():
 			print('testing complete')
 
 
-
 ##################################################################################################################################
 ####################################################################MAIN##########################################################
-
 
 #main
 tf.reset_default_graph()
 
-#first arg is the decision network size: sys.argv[1]
-#second arg is the expert network size: sys.argv[2]
-#third arg is the env_train_on: sys.argv[3]
+#sys.argv[1] - first arg is the decision network size 98
+#sys.argv[2] - second arg is the expert network size: 19
+#sys.argv[3] - third arg is the env_train_on: 0, 1, 2, None
 if str(sys.argv[3])=='None':
 	trainenv = None
 else:
 	trainenv = int(sys.argv[3])
-#fourth arg is the #ep to train on: sys.argv[4]
-#fifth arg is gpu to use: sys.argv[5]
-#sixth arg is lesion type: sys.argv[6]
-#*** arg is run number: sys.argv[***]
-#to run multiple simultaneously: python3 a3c_btsuda_dnet3expertseq_importENV.py 98 19 0 0 & python3 a3c_btsuda_dnet3expertseq_importENV.py 5 9 0 0 &
-#	only run networks at same stage with different sizes otherwise may overwrite files
+#sys.argv[4] - fourth arg is the #ep to train on: 100
+#sys.argv[5] - fifth arg is gpu to use: 0
+#sys.argv[6] - sixth arg is lesion type: 0 (no lesion), 1-12
+#sys.argv[7] - seventh arg is degree of ablation or knockdown in lesions: 0
+#sys.argv[8] - eighth arg is carddeck: 0
+#sys.argv[9] - ninth arg is runnumber: 0
+#
+#	python3 a3c_btsuda_dnet3seeded_LESION_wmENV.py [NETSZ_D] [NETSZ_E] [trainenv] [EPS_TO_TRAIN_ON] [GPU] [LTYPE] [p_abl] [carddeck] [runnum]
+#
+#to run one or multiple simultaneously:
+#	python3 a3c_btsuda_dnet3seeded_LESION_wmENV.py 98 19 None 100 0 0 0 0 0 &
+#	for a loop to do all runs in 1 command over 3 gpus:
+#		l=6; p=0.9; for i in `seq 0 9`; do if [ $i -lt 4 ]; then (python3 a3c_btsuda_dnet3seeded_LESION_wmENV.py 98 19 None 100 0 $l $p 0 $i &); elif [ $i -gt 3 ] && [ $i -lt 8 ]; then (python3 a3c_btsuda_dnet3seeded_LESION_wmENV.py 98 19 None 100 1 $l $p 0 $i &); else (python3 a3c_btsuda_dnet3seeded_LESION_wmENV.py 98 19 None 100 2 $l $p 0 $i &); fi; done
+#
+#	only train networks at same stage with different sizes otherwise may overwrite files
 
 LTYPE = int(sys.argv[6]) #Lesion type: 0=no_lesion,
 	#impaired input to gate: 1=gate_no_rt-1, 2=gate_no_at-1, 3=gate_no_art-1
 	#impaired gate output: 4=gate_output
 	#impaired gate output synapses: 5=w_hv, 6=w_hpi
-p_abl = float(sys.argv[7])
-runnum = int(sys.argv[8])
+	#impaired value connections: 6,10=v_mask
+	#impaired policy connections: 8,10=pi_mask
+	#impaired network dynamics (forget gate connections ablation): 12=forget_gate
+p_abl = float(sys.argv[7]) #degree of ablation or knockdown
+runnum = int(sys.argv[9])
 
 GLOBAL_EPISODE_COUNTER = 0
 TRAIN_EP_COUNT = 0
@@ -1791,24 +1654,24 @@ GAMMA = 0
 NUMBER_OF_WORKERS = 12
 #query the environment to see what the state-space is --need to know the input size to create the network
 RNDMSD = None
-eprs = 0
+useFD = int(sys.argv[8]) #carddeck -- 0 is fulldeck; 1 is MWCST deck (no ambiguous cards)
+eprs = 0 #something for switching env paradigm self.actorenv=[4]
 NUM_TRAIN_EPS = 0
-do_training = False
-just_trained = False
+do_training = False #indicator used with self.assesser to check whether to keep training or not
+just_trained = False #indicator used with self.assesser to check whether to keep training or not
 dw_env_train = [trainenv]
-SHIFTER_ENV = False
-env_p=[0.5,0.5,0]
-nw_env_train = [None] #env to train new expert and dnet on simultaneously
+SHIFTER_ENV = False #switching env paradigm self.actorenv=[4]
+env_p=[0.5,0.5,0] #for switching env paradigm
 
 train_assesser_on = True
-avecorthresh = 4 #4
-aveover = 100 #100
-train_to_profst = False
+avecorthresh = 4 #4; ave performance threshold to assess for stopping training
+aveover = 100 #100; number of ep to ave over to assess
+train_to_profst = False #setting that stops training if "stable"; checks if difference in ave performance over last 2 blocks of 200 ep is <1 (considered stable)
 
-subfldr = 'LESION' #'n123' or 'OI' or 'OQWK'
+subfldr = 'LESION' #'n123' or 'OI' or 'OQWK'; change depending on mode being used in
 
-NETSZ_D = int(sys.argv[1])
-NETSZ_E = int(sys.argv[2])
+NETSZ_D = int(sys.argv[1]) #size of gating network
+NETSZ_E = int(sys.argv[2]) #size of expert networks
 
 STATE_SPACE = We.get_state_space() #size of state space
 ACTION_SPACE = We.get_action_space() #size of action space
@@ -1839,15 +1702,19 @@ if LTYPE==12: #ablate connections between input and forget gate
 else:
 	input_w_mask = np.ones([STATE_SPACE+NETSZ_D,NETSZ_D*4])
 
-
+	
 cchars = [0,1,2,3]
 fdeck = list(itertools.product(cchars,repeat=3))
-if RNDMSD==None:
-	training_deck_indices = [item for item in range(len(fdeck))]
+mdeck = list(itertools.permutations(cchars,3))
+if useFD==0:
+	if RNDMSD==None:
+		training_deck_indices = [item for item in range(len(fdeck))]
+	else:
+		np.random.seed(RNDMSD)
+		training_deck_indices = [item for item in np.random.choice(range(len(fdeck)),round(len(fdeck)*2/3),replace=False)] #list of which cards to use for training
+		np.random.seed(None)
 else:
-	np.random.seed(RNDMSD)
-	training_deck_indices = [item for item in np.random.choice(range(len(fdeck)),round(len(fdeck)*2/3),replace=False)] #list of which cards to use for training
-	np.random.seed(None)
+	training_deck_indices = [item for item in range(len(mdeck))]
 
 
 #create central_network
@@ -1868,9 +1735,7 @@ for i in range(NUMBER_OF_WORKERS):
 #workers to train the decision network DNET
 dworkers = []
 for i in range(NUMBER_OF_WORKERS):
-	if i==0:
-		dworkers.append(worker(name='d'+str(i),trainer=TRAINER,actorenv=dw_env_train))
-	# dworkers.append(worker(name='d'+str(i),trainer=TRAINER,actorenv=dw_env_train))
+	dworkers.append(worker(name='d'+str(i),trainer=TRAINER,actorenv=dw_env_train))
 
 dneworkers = []
 for i in range(NUMBER_OF_WORKERS):
