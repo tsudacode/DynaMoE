@@ -1625,12 +1625,12 @@ else:
 #sys.argv[8] - eighth arg is carddeck: 0
 #sys.argv[9] - ninth arg is runnumber: 0
 #
-#	python3 a3c_btsuda_dnet3seeded_LESION_wmENV.py [NETSZ_D] [NETSZ_E] [trainenv] [EPS_TO_TRAIN_ON] [GPU] [LTYPE] [p_abl] [carddeck] [runnum]
+#	python3 DynaMoE_LESION.py [NETSZ_D] [NETSZ_E] [trainenv] [EPS_TO_TRAIN_ON] [GPU] [LTYPE] [p_abl] [carddeck] [runnum]
 #
 #to run one or multiple simultaneously:
-#	python3 a3c_btsuda_dnet3seeded_LESION_wmENV.py 98 19 None 100 0 0 0 0 0 &
+#	python3 DynaMoE_LESION.py 98 19 None 100 0 0 0 0 0 &
 #	for a loop to do all runs in 1 command over 3 gpus:
-#		l=6; p=0.9; for i in `seq 0 9`; do if [ $i -lt 4 ]; then (python3 a3c_btsuda_dnet3seeded_LESION_wmENV.py 98 19 None 100 0 $l $p 0 $i &); elif [ $i -gt 3 ] && [ $i -lt 8 ]; then (python3 a3c_btsuda_dnet3seeded_LESION_wmENV.py 98 19 None 100 1 $l $p 0 $i &); else (python3 a3c_btsuda_dnet3seeded_LESION_wmENV.py 98 19 None 100 2 $l $p 0 $i &); fi; done
+#		l=6; p=0.9; for i in `seq 0 9`; do if [ $i -lt 4 ]; then (python3 DynaMoE_LESION.py 98 19 None 100 0 $l $p 0 $i &); elif [ $i -gt 3 ] && [ $i -lt 8 ]; then (python3 DynaMoE_LESION.py 98 19 None 100 1 $l $p 0 $i &); else (python3 DynaMoE_LESION.py 98 19 None 100 2 $l $p 0 $i &); fi; done
 #
 #	only train networks at same stage with different sizes otherwise may overwrite files
 
