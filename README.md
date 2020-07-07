@@ -13,4 +13,5 @@ Loads a network that was trained sequentially on shape->color->number with new e
 Lesion indicated is then implemented and the network is tested on the classic WCST or using the deck from MWCST (no ambiguous cards).
 
 Command to run DynaMoE (currently set up to load a previously trained DynaMoE and test with lesions):
+
 `python3 DynaMoE_LESION.py [NETSZ_D] [NETSZ_E] [trainenv] [EPS_TO_TRAIN_ON] [GPU] [LTYPE] [p_abl] [carddeck] [runnum]`
