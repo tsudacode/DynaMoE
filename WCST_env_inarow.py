@@ -17,15 +17,17 @@ class WIC_env():
 		#for start state choose random previous action and reward and cards
 		self.cardchars = [0,1,2,3]
 		self.fulldeck = list(itertools.product(self.cardchars,repeat=3))
+		self.mfulldeck = list(itertools.permutations(self.cardchars,3)) #MWCST deck of 24 non-ambiguous cards
 
 		self.training_deck_indices = training_deck_indices
 		if len(training_deck_indices)==64: #if its the whole deck use it for both train and test
 			self.carddeck = [tuple(item) for item in np.array(self.fulldeck)[self.training_deck_indices]]
 		else:
-			if self.status=='train':
-				self.carddeck = [tuple(item) for item in np.array(self.fulldeck)[self.training_deck_indices]]
-			elif self.status=='test':
-				self.carddeck = [tuple(item) for item in np.delete(np.array(self.fulldeck),self.training_deck_indices,0)]
+			self.carddeck = [tuple(item) for item in np.array(self.mfulldeck)[self.training_deck_indices]]
+# 			if self.status=='train':
+# 				self.carddeck = [tuple(item) for item in np.array(self.fulldeck)[self.training_deck_indices]]
+# 			elif self.status=='test':
+# 				self.carddeck = [tuple(item) for item in np.delete(np.array(self.fulldeck),self.training_deck_indices,0)]
 
 		randnewcard = False
 		if len(set_start_state)==0:
@@ -161,10 +163,11 @@ class WIC_env():
 			if len(self.training_deck_indices)==64: #if its the whole deck use it for both train and test
 				self.carddeck = [tuple(item) for item in np.array(self.fulldeck)[self.training_deck_indices]]
 			else:
-				if self.status=='train':
-					self.carddeck = [tuple(item) for item in np.array(self.fulldeck)[self.training_deck_indices]]
-				elif self.status=='test':
-					self.carddeck = [tuple(item) for item in np.delete(np.array(self.fulldeck),self.training_deck_indices,0)]
+				self.carddeck = [tuple(item) for item in np.array(self.mfulldeck)[self.training_deck_indices]]
+# 				if self.status=='train':
+# 					self.carddeck = [tuple(item) for item in np.array(self.fulldeck)[self.training_deck_indices]]
+# 				elif self.status=='test':
+# 					self.carddeck = [tuple(item) for item in np.delete(np.array(self.fulldeck),self.training_deck_indices,0)]
 		random_pick = np.random.randint(0,len(self.carddeck))
 		new_card = self.carddeck[random_pick]
 		self.carddeck.pop(random_pick)
