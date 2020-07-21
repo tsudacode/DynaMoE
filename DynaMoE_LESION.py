@@ -8,8 +8,7 @@ import os
 import multiprocessing
 import itertools
 import sys
-sys.path.append('/home/btsuda/code') #need env file ('WCST_env_inarow.py') somewhere; here it is in /home/btsuda/code/python_modules/
-from python_modules import WCST_env_inarow as We #normal WCST deck
+from python_modules import WCST_env as We #need env file ('WCST_env.py'); here it is in directory python_modules/
 
 ###Misc functions
 #Function to specify which gpu to use
