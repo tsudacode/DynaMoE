@@ -510,7 +510,7 @@ class worker():
 	#bootstrap value is 0 if episode ended in terminal state; V(s_n+1) if episode was cut off in state s_n+1
 		#i.e. worker was in s_n and did action a_n to move to s_n+1, then episode was cut because exceed max length
 	def train(self,training_data,bootstrap_value,gamma,sess):
-		global GLOBAL_EPISODE_COUNTER, TO_TRAIN, just_trained
+		global GLOBAL_EPISODE_COUNTER, TO_TRAIN
 		#first replace the rewards with the discounted-rewards because this is what the network needs to calc losses
 		array_training_data = np.array(training_data)
 		step_rewards = [ritem for sublist in array_training_data[:,3] for ritem in sublist] #list of the step by step rewards
@@ -716,13 +716,11 @@ class worker():
 					file.write(str(self.env.envtype)+'\n')
 				if self.wtl=='w':
 					self.wtl='a'
+					
 
-		if self.actorenv==[4]:
-			just_trained = True
-
-	def get_experience(self,sess,coord,env_p=[1/3,1/3,1/3],NUM_TRAIN_EPS=1000,on_ep=True):
+	def get_experience(self,sess,coord,NUM_TRAIN_EPS=1000,on_ep=True):
 		print ("Starting " + self.name)
-		global GLOBAL_EPISODE_COUNTER, NUMBER_OF_WORKERS, TO_TRAIN, WHICH_DNET, TRAIN_EP_COUNT, eprs, last400ep, train_to_profst, avecorthresh, aveover
+		global GLOBAL_EPISODE_COUNTER, NUMBER_OF_WORKERS, TO_TRAIN, WHICH_DNET, TRAIN_EP_COUNT, last400ep, train_to_profst, avecorthresh, aveover
 		with sess.as_default(), sess.graph.as_default():   #with this session and session graph set to default
 			firstpriorenvtype = True
 			stop_training = False
@@ -742,15 +740,7 @@ class worker():
 				else:
 					prevenvtype = self.env.envtype
 
-				if self.actorenv==[4]:
-					envtypes = np.array([0,1,2])
-					envchoice = np.delete(envtypes,np.where(np.array(prevenvtype)==envtypes)[0][0],0)
-					use_env_p = np.delete(env_p,np.where(np.array(prevenvtype)==envtypes)[0][0],0)
-					use_env_p = use_env_p/sum(use_env_p) #normalize to 1
-					envtype_cur = np.random.choice(envchoice,p=use_env_p)
-					self.env = We.make_new_env(last_ep_type=prevenvtype,actorenv=[envtype_cur],status='train',training_deck_indices=training_deck_indices)
-				else:
-					self.env = We.make_new_env(last_ep_type=prevenvtype,actorenv=self.actorenv,status='train',training_deck_indices=training_deck_indices) #for each ep make a new env obj to get new baseline probs of A and B
+				self.env = We.make_new_env(last_ep_type=prevenvtype,actorenv=self.actorenv,status='train',training_deck_indices=training_deck_indices) #for each ep make a new env obj to get new baseline probs of A and B
 				start_state = We.get_start_state_from_env(self.env)
 				s_cur = start_state
 				if (TO_TRAIN=='Experts_n1') | (TO_TRAIN=='Experts_n2') | (TO_TRAIN=='Experts_n3'):
@@ -1258,24 +1248,17 @@ class worker():
 
 				self.train(training_data,bootstrap_value,GAMMA,sess)
 
-				if self.actorenv==[4]:
-					TRAIN_EP_COUNT += 1
-					if TRAIN_EP_COUNT == NUM_TRAIN_EPS:
-						coord.request_stop()
-						print('trained dnet2 on '+str(NUM_TRAIN_EPS))
-						TRAIN_EP_COUNT = 0
-				else:
-					GLOBAL_EPISODE_COUNTER += 1
-					if (GLOBAL_EPISODE_COUNTER % 100 == 0):
-						print('GBC: ' + str(GLOBAL_EPISODE_COUNTER))
-					if GLOBAL_EPISODE_COUNTER >= EPS_TO_TRAIN_ON:
-						coord.request_stop()
+				GLOBAL_EPISODE_COUNTER += 1
+				if (GLOBAL_EPISODE_COUNTER % 100 == 0):
+					print('GBC: ' + str(GLOBAL_EPISODE_COUNTER))
+				if GLOBAL_EPISODE_COUNTER >= EPS_TO_TRAIN_ON:
+					coord.request_stop()
 
 				#while using_workers_to_optimize is still True, go back to start, i.e. start a new episode
 				#go get copy of most uptodate central_network (post applying the latest gradient update) and have at it again
 
 	def test(self,sess,testdatapath,getnumep):
-		global test_who, test_onwhom, use_random_e, eprs, env_p, do_training, NUM_TRAIN_EPS, just_trained, GLOBAL_EPISODE_COUNTER
+		global test_who, test_onwhom, use_random_e, NUM_TRAIN_EPS, GLOBAL_EPISODE_COUNTER
 		fileroot = testdatapath + '_' + test_who + '_ON_env' + str(test_onwhom) #this creates a string of the form
 		print ("Starting " + self.name + " for testing")
 		with sess.as_default(), sess.graph.as_default():
@@ -1295,30 +1278,7 @@ class worker():
 				else:
 					prevenvtype = self.env.envtype
 
-				if self.actorenv==[4]:
-					if eprs==0:
-						env_p = np.array([0.5,0.5,0])
-					if (GLOBAL_EPISODE_COUNTER > 0) & (GLOBAL_EPISODE_COUNTER % 600 == 0): #every 6k change the env proportions pseudorandomly
-						eprs += 1 #change the random seed
-						np.random.seed(eprs) #set the random seed
-						#env_p = np.random.rand(3) #pick the new env proportions
-						env_p = np.array([0.5,0.5,0.5])
-						wz = np.random.choice([0,1,2],p=[1/3,1/3,1/3])
-						env_p[wz]=0 #randomly choose one env-type to be missing entirely
-						#env_p = env_p/sum(env_p) #normalize to 1
-						np.random.seed(None)	#reset the random seed to None
-						print('GEC:'+str(GLOBAL_EPISODE_COUNTER))
-						print('Env_p switched:')
-						print(env_p)
-					#use env_p to choose the env for the ep excluding the last envtype
-					envtypes = np.array([0,1,2])
-					envchoice = np.delete(envtypes,np.where(np.array(prevenvtype)==envtypes)[0][0],0) #remove last envtype
-					use_env_p = np.delete(env_p,np.where(np.array(prevenvtype)==envtypes)[0][0],0)
-					use_env_p = use_env_p/sum(use_env_p) #normalize to 1
-					envtype_cur = np.random.choice(envchoice,p=use_env_p)
-					self.env = We.make_new_env(last_ep_type=prevenvtype,actorenv=[envtype_cur],status='train',training_deck_indices=training_deck_indices)
-				else:
-					self.env = We.make_new_env(last_ep_type=prevenvtype,actorenv=self.actorenv,status='test',training_deck_indices=training_deck_indices)
+				self.env = We.make_new_env(last_ep_type=prevenvtype,actorenv=self.actorenv,status='test',training_deck_indices=training_deck_indices)
 				start_state = We.get_start_state_from_env(self.env)
 				s_cur = start_state
 
@@ -1581,26 +1541,6 @@ class worker():
 								file.write(str(self.env.envtype)+'\n')
 							self.env = We.make_new_env(last_ep_type=prevenvtype,actorenv=self.actorenv,status='test',set_start_state=s_cur,training_deck_indices=training_deck_indices)
 
-					if self.actorenv==[4]:
-						GLOBAL_EPISODE_COUNTER += 1
-
-						if ep_num==getnumep:
-							print('Tested '+str(getnumep)+' ep')
-							print('Ave epl: '+str(np.mean(self.assesser)))
-							if np.mean(self.assesser) > 7:
-								do_training = True
-								print('Need training')
-								if just_trained==True:
-									NUM_TRAIN_EPS = 10000
-									print('Training 10k')
-								else:
-									NUM_TRAIN_EPS = 1000
-									print('Training 1k')
-							elif np.mean(self.assesser) <= 7:
-								print('Good! Continue testing')
-								do_training = False
-								just_trained = False
-							self.assesser = []
 
 			print('testing complete')
 
@@ -1654,13 +1594,8 @@ NUMBER_OF_WORKERS = 12
 #query the environment to see what the state-space is --need to know the input size to create the network
 RNDMSD = None
 useFD = int(sys.argv[8]) #carddeck -- 0 is fulldeck; 1 is MWCST deck (no ambiguous cards)
-eprs = 0 #something for switching env paradigm self.actorenv=[4]
 NUM_TRAIN_EPS = 0
-do_training = False #indicator used with self.assesser to check whether to keep training or not
-just_trained = False #indicator used with self.assesser to check whether to keep training or not
 dw_env_train = [trainenv]
-SHIFTER_ENV = False #switching env paradigm self.actorenv=[4]
-env_p=[0.5,0.5,0] #for switching env paradigm
 
 train_assesser_on = True
 avecorthresh = 4 #4; ave performance threshold to assess for stopping training
@@ -1762,10 +1697,7 @@ TO_TRAIN = 'DNET' #Experts_n1, Experts_n2, Experts_n3, DNET, DNETAllExpert
 TrainNewOnly = True
 WHICH_DNET = '3e' # '2e' if training with just n1 and n2; '3e' if training with all 3 experts
 
-if SHIFTER_ENV==True:
-	the_test_worker = worker(name='_testman',trainer=TRAINER,actorenv=[4])
-else:
-	the_test_worker = worker(name='_testman',trainer=TRAINER,actorenv=test_onwhom)
+the_test_worker = worker(name='_testman',trainer=TRAINER,actorenv=test_onwhom)
 
 #---------------------------------------------------------------------------------------------------------------------------
 
@@ -1783,98 +1715,60 @@ with tf.Session(config=tf.ConfigProto(gpu_options=set_gpu(UGPU, .2))) as sess:
 
 	sess.run(resetzero_network_vars('central_network','central_network'))
 
-	if SHIFTER_ENV==True:
-		while GLOBAL_EPISODE_COUNTER < EPS_TO_TRAIN_ON:
-			the_test_worker.test(sess=sess,testdatapath=testdatapath,getnumep=getnumep)
-			time.sleep(1)
-			if do_training==True:
-				print('TRAINING')
-				coord = tf.train.Coordinator()
-				if just_trained==False:
-					print('DNET')
-					TO_TRAIN = 'DNET'
-					dworker_threads = []
-					for worker in dworkers: #for each worker object in the workers list of them
-						worker_experience = lambda: worker.get_experience(sess=sess,coord=coord,env_p=env_p,NUM_TRAIN_EPS=NUM_TRAIN_EPS)
-						newthread = threading.Thread(target=(worker_experience))
-						newthread.start() #start the worker
-						time.sleep(0.5) #wait a bit
-						dworker_threads.append(newthread) #add the started worker to the list of worker_threads
-					coord.join(dworker_threads) #pass the worker threads to the coordinator that will apply join to them
-												#i.e. wait for them to finish
-				#whenever 10K training is done it is done on dnet and newexpert
-				elif just_trained==True:
-					print('NewExpert')
-					TO_TRAIN = 'DNETNewExpert'
-					nworker_threads = []
-					for worker in nworkers: #for each worker object in the workers list of them
-						worker_experience = lambda: worker.get_experience(sess=sess,coord=coord,env_p=env_p,NUM_TRAIN_EPS=NUM_TRAIN_EPS)
-						newthread = threading.Thread(target=(worker_experience))
-						newthread.start() #start the worker
-						time.sleep(0.5) #wait a bit
-						nworker_threads.append(newthread) #add the started worker to the list of worker_threads
-					coord.join(nworker_threads) #pass the worker threads to the coordinator that will apply join to them
-												#i.e. wait for them to finish
-				#if saving network, save
-		if dosave == True:
-			save_path = saver.save(sess, savepath)
-			print("saved to " + savepath)
-
-	else:
-		#if training network, train using workers
-		if trainnetwork == True:
-			coord = tf.train.Coordinator()
-			#start each worker in a separate thread
-			if TO_TRAIN=='Experts_n1':
-				n1_worker_threads = [] #list of worker threads
-				for worker in n1workers: #for each worker object in the workers list of them
-					worker_experience = lambda: worker.get_experience(sess=sess,coord=coord)
-					newthread = threading.Thread(target=(worker_experience))
-					newthread.start() #start the worker
-					time.sleep(0.5) #wait a bit
-					n1_worker_threads.append(newthread) #add the started worker to the list of worker_threads
-				coord.join(n1_worker_threads) #pass the worker threads to the coordinator that will apply join to them
-											#i.e. wait for them to finish
-			elif TO_TRAIN=='Experts_n2':
-				n2_worker_threads = [] #list of worker threads
-				for worker in n2workers: #for each worker object in the workers list of them
-					worker_experience = lambda: worker.get_experience(sess=sess,coord=coord)
-					newthread = threading.Thread(target=(worker_experience))
-					newthread.start() #start the worker
-					time.sleep(0.5) #wait a bit
-					n2_worker_threads.append(newthread) #add the started worker to the list of worker_threads
-				coord.join(n2_worker_threads) #pass the worker threads to the coordinator that will apply join to them
-											#i.e. wait for them to finish
-			elif TO_TRAIN=='Experts_n3':
-				n3_worker_threads = [] #list of worker threads
-				for worker in n3workers: #for each worker object in the workers list of them
-					worker_experience = lambda: worker.get_experience(sess=sess,coord=coord)
-					newthread = threading.Thread(target=(worker_experience))
-					newthread.start() #start the worker
-					time.sleep(0.5) #wait a bit
-					n3_worker_threads.append(newthread) #add the started worker to the list of worker_threads
-				coord.join(n3_worker_threads) #pass the worker threads to the coordinator that will apply join to them
-											#i.e. wait for them to finish
-			elif TO_TRAIN=='DNET':
-				dworker_threads = []
-				for worker in dworkers: #for each worker object in the workers list of them
-					worker_experience = lambda: worker.get_experience(sess=sess,coord=coord)
-					newthread = threading.Thread(target=(worker_experience))
-					newthread.start() #start the worker
-					time.sleep(0.5) #wait a bit
-					dworker_threads.append(newthread) #add the started worker to the list of worker_threads
-				coord.join(dworker_threads) #pass the worker threads to the coordinator that will apply join to them
-											#i.e. wait for them to finish
-			elif TO_TRAIN=='DNETAllExpert':
-				dneworker_threads = []
-				for worker in dneworkers: #for each worker object in the workers list of them
-					worker_experience = lambda: worker.get_experience(sess=sess,coord=coord)
-					newthread = threading.Thread(target=(worker_experience))
-					newthread.start() #start the worker
-					time.sleep(0.5) #wait a bit
-					dneworker_threads.append(newthread) #add the started worker to the list of worker_threads
-				coord.join(dneworker_threads) #pass the worker threads to the coordinator that will apply join to them
-											#i.e. wait for them to finish
+	#if training network, train using workers
+	if trainnetwork == True:
+		coord = tf.train.Coordinator()
+		#start each worker in a separate thread
+		if TO_TRAIN=='Experts_n1':
+			n1_worker_threads = [] #list of worker threads
+			for worker in n1workers: #for each worker object in the workers list of them
+				worker_experience = lambda: worker.get_experience(sess=sess,coord=coord)
+				newthread = threading.Thread(target=(worker_experience))
+				newthread.start() #start the worker
+				time.sleep(0.5) #wait a bit
+				n1_worker_threads.append(newthread) #add the started worker to the list of worker_threads
+			coord.join(n1_worker_threads) #pass the worker threads to the coordinator that will apply join to them
+										#i.e. wait for them to finish
+		elif TO_TRAIN=='Experts_n2':
+			n2_worker_threads = [] #list of worker threads
+			for worker in n2workers: #for each worker object in the workers list of them
+				worker_experience = lambda: worker.get_experience(sess=sess,coord=coord)
+				newthread = threading.Thread(target=(worker_experience))
+				newthread.start() #start the worker
+				time.sleep(0.5) #wait a bit
+				n2_worker_threads.append(newthread) #add the started worker to the list of worker_threads
+			coord.join(n2_worker_threads) #pass the worker threads to the coordinator that will apply join to them
+										#i.e. wait for them to finish
+		elif TO_TRAIN=='Experts_n3':
+			n3_worker_threads = [] #list of worker threads
+			for worker in n3workers: #for each worker object in the workers list of them
+				worker_experience = lambda: worker.get_experience(sess=sess,coord=coord)
+				newthread = threading.Thread(target=(worker_experience))
+				newthread.start() #start the worker
+				time.sleep(0.5) #wait a bit
+				n3_worker_threads.append(newthread) #add the started worker to the list of worker_threads
+			coord.join(n3_worker_threads) #pass the worker threads to the coordinator that will apply join to them
+										#i.e. wait for them to finish
+		elif TO_TRAIN=='DNET':
+			dworker_threads = []
+			for worker in dworkers: #for each worker object in the workers list of them
+				worker_experience = lambda: worker.get_experience(sess=sess,coord=coord)
+				newthread = threading.Thread(target=(worker_experience))
+				newthread.start() #start the worker
+				time.sleep(0.5) #wait a bit
+				dworker_threads.append(newthread) #add the started worker to the list of worker_threads
+			coord.join(dworker_threads) #pass the worker threads to the coordinator that will apply join to them
+										#i.e. wait for them to finish
+		elif TO_TRAIN=='DNETAllExpert':
+			dneworker_threads = []
+			for worker in dneworkers: #for each worker object in the workers list of them
+				worker_experience = lambda: worker.get_experience(sess=sess,coord=coord)
+				newthread = threading.Thread(target=(worker_experience))
+				newthread.start() #start the worker
+				time.sleep(0.5) #wait a bit
+				dneworker_threads.append(newthread) #add the started worker to the list of worker_threads
+			coord.join(dneworker_threads) #pass the worker threads to the coordinator that will apply join to them
+										#i.e. wait for them to finish
 
 
 		#if saving network, save
