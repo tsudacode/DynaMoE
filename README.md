@@ -29,3 +29,13 @@ Lesion indicated is implemented and the network is tested on the classic WCST or
 
 Command to run DynaMoE (currently set up to load a previously trained DynaMoE and test with lesions):  
 `python3 DynaMoE_LESION.py [NETSZ_D] [NETSZ_E] [trainenv] [EPS_TO_TRAIN_ON] [GPU] [LTYPE] [p_abl] [carddeck] [runnum]`
+
+# Citation
+
+If you use this repo in your research, please cite:
+`@article{Tsuda_2020,
+    Author = {Tsuda, Ben and Tye, Kay M. and Siegelmann, Hava T. and Sejnowski, Terrence J.},
+    Journal = {bioRxiv},
+    DOI = {https://doi.org/10.1101/2020.03.11.984757},
+    Title = {A modeling framework for adaptive lifelong learning with transfer and savings through gating in the prefrontal cortex},
+    Year = {2020}}`
