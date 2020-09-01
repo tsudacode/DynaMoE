@@ -7,6 +7,19 @@ https://www.biorxiv.org/content/10.1101/2020.03.11.984757v1
 Rough version of single gating network with 1-3 expert networks
 
 Trains by reinforcement learning with A3C training algorithm of Minh et al. 2016: http://proceedings.mlr.press/v48/mniha16.pdf
+Organization of Dynamoe_LESION.py is
+  - helper fxns
+  - definition of network class
+  - definition of worker class
+      - train fxn
+      - get_experience fxn
+      - test fxn
+  - main
+      - definition of parameters and output directories
+      - creation of central network
+      - creation of training workers
+      - creation of testing workers
+      - script to deploy workers for training AND testing
 
 Created with Wisconsin Card Sorting Task environment  
 
