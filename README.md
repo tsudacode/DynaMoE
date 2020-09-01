@@ -6,7 +6,7 @@ https://www.biorxiv.org/content/10.1101/2020.03.11.984757v1
 
 Rough version of single gating network with 1-3 expert networks
 
-Trains by reinforcement learning with A3C training algorithm of Minh et al. 2016: http://proceedings.mlr.press/v48/mniha16.pdf
+Trains by reinforcement learning with A3C training algorithm of Minh et al. 2016: http://proceedings.mlr.press/v48/mniha16.pdf 
 Organization of Dynamoe_LESION.py is
   - helper fxns
   - definition of network class
