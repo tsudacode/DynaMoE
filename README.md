@@ -24,7 +24,7 @@ Organization of Dynamoe_LESION.py is
 Created with Wisconsin Card Sorting Task environment  
 
 **For lesion studies**  
-Loads a network that was trained sequentially on shape->color->number with new expert network added in each sort rule (n1 -> n2->n3), then gating network (dnet) was trained on classic interleaved WCST with all experts present.  
+Loads a network that was trained sequentially on shape->color->number with new expert network added in each sort rule (n1 &rarr n2->n3), then gating network (dnet) was trained on classic interleaved WCST with all experts present.  
 Lesion indicated is implemented and the network is tested on the classic WCST or using the deck from MWCST (no ambiguous cards).
 
 Command to run DynaMoE (currently set up to load a previously trained DynaMoE and test with lesions):  
