@@ -334,7 +334,6 @@ class the_network():
 					self.dnet_apply_gradients = trainer.apply_gradients(zip(dnet_grads_to_apply,dnet_global_vars))
 					self.gv = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, 'central_network')
 
-
 			#central network isn't held by a worker - doesn't need to calculate loss and gradient; each worker has to do this
 			#workers then send the updates they would make to the central network
 			#central network uses the gradients to update itself
@@ -357,7 +356,6 @@ class worker():
 		self.working_copy_network_params = get_network_vars('central_network',self.name)
 		self.default_graph = tf.get_default_graph()
 		self.assesser = []
-
 
 	#when episode is done, worker gathers data and processes it
 	#passes processed data to his own network to calculate gradients
@@ -548,7 +546,6 @@ class worker():
 				self.working_copy_network.dnet_apply_gradients],
 				feed_dict=dnet_feed_dict)
 					
-
 	def get_experience(self,sess,coord,NUM_TRAIN_EPS=1000,on_ep=True):
 		print ("Starting " + self.name)
 		global GLOBAL_EPISODE_COUNTER, NUMBER_OF_WORKERS, TO_TRAIN, WHICH_DNET, TRAIN_EP_COUNT, last400ep, train_to_profst, avecorthresh, aveover
@@ -1244,9 +1241,7 @@ class worker():
 							prevenvtype = self.env.envtype
 							self.env = We.make_new_env(last_ep_type=prevenvtype,actorenv=self.actorenv,status='test',set_start_state=s_cur,training_deck_indices=training_deck_indices)
 
-
 			print('testing complete')
-
 
 ##################################################################################################################################
 ####################################################################MAIN##########################################################
@@ -1269,13 +1264,6 @@ else:
 #sys.argv[9] - ninth arg is runnumber: 0
 #
 #	python3 DynaMoE_LESION.py [NETSZ_D] [NETSZ_E] [trainenv] [EPS_TO_TRAIN_ON] [GPU] [LTYPE] [p_abl] [carddeck] [runnum]
-#
-#to run one or multiple simultaneously:
-#	python3 DynaMoE_LESION.py 98 19 None 100 0 0 0 0 0 &
-#	for a loop to do all runs in 1 command over 3 gpus:
-#		l=6; p=0.9; for i in `seq 0 9`; do if [ $i -lt 4 ]; then (python3 DynaMoE_LESION.py 98 19 None 100 0 $l $p 0 $i &); elif [ $i -gt 3 ] && [ $i -lt 8 ]; then (python3 DynaMoE_LESION.py 98 19 None 100 1 $l $p 0 $i &); else (python3 DynaMoE_LESION.py 98 19 None 100 2 $l $p 0 $i &); fi; done
-#
-#	only train networks at same stage with different sizes otherwise may overwrite files
 
 LTYPE = int(sys.argv[6]) #Lesion type: 0=no_lesion,
 	#impaired input to gate: 1=gate_no_rt-1, 2=gate_no_at-1, 3=gate_no_art-1
@@ -1337,7 +1325,6 @@ if LTYPE==12: #ablate connections between input and forget gate
 	input_w_mask = np.concatenate((np.ones([STATE_SPACE+NETSZ_D,NETSZ_D*2]),np.random.choice(2,[STATE_SPACE+NETSZ_D,NETSZ_D],p=[p_abl,(1-p_abl)]),np.ones([STATE_SPACE+NETSZ_D,NETSZ_D])),axis=1)
 else:
 	input_w_mask = np.ones([STATE_SPACE+NETSZ_D,NETSZ_D*4])
-
 	
 cchars = [0,1,2,3]
 fdeck = list(itertools.product(cchars,repeat=3))
