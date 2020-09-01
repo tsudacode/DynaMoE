@@ -10,7 +10,7 @@ import itertools
 import sys
 from python_modules import WCST_env as We #need env file ('WCST_env.py'); here it is in directory python_modules/
 
-###Misc functions
+#####Helper fxns
 #Function to specify which gpu to use
 def set_gpu(gpu, frac):
     """
@@ -1368,22 +1368,22 @@ for i in range(NUMBER_OF_WORKERS):
 
 #Tell what to do with network - save, restore, train, test------------------------------------------------------------------
 #saver
-filerootpath = "/home/btsuda/code/btsuda_a3c_envs/wisconsincard_env/setshifting/"
+filerootpath = "/home/outputfiles/"
 saver = tf.train.Saver()
 dosave = False #set to True to save; False to not save
-savepath = None #filerootpath+"dnetAllExp/inarow1step/m"+str(NETSZ_D)+str(NETSZ_E)+"/train"+subfldr+"/trainedonNone/savedmodel.ckpt"
-dorestore = True
-restorepath = filerootpath+"dnetAllExp/inarow1step/m"+str(NETSZ_D)+str(NETSZ_E)+"/train"+subfldr+"/trainedonNone/savedmodel.ckpt" #Set to restore path if want to restore
-trainnetwork = False #set to True if want to train network; False if just restoring and network and testing it
+savepath = filerootpath+"models/savedmodel.ckpt"
+dorestore = False
+restorepath = filerootpath+"models/savedmodel.ckpt" #Set to restore path if want to restore
+trainnetwork = True #set to True if want to train network; False if just restoring and network and testing it
 testnetwork = True #set to True if want to do test run of network
-traindatapath = None #filerootpath+"dnetAllExp/inarow1step/m"+str(NETSZ_D)+str(NETSZ_E)+"_data/train"+subfldr+"/totfake" #3inarow_L"+str(LTYPE)+str(p_abl)+"_DNET_envNone" #wLESION"+str(LTYPE)+"_
-testdatapath = filerootpath+"dnetAllExp/inarow1step/m"+str(NETSZ_D)+str(NETSZ_E)+"_data/train"+subfldr+"/3inarow_TEST012N_L"+str(LTYPE)+'_'+str(p_abl)+"_envNone_r"+str(runnum) #give path and prefix for data to save
-test_who = 'dnet' #network to test: n1, n2, n3, dnet
+traindatapath = filerootpath+"data/train_"
+testdatapath = filerootpath+"data/test_" #give path and prefix for data to save
+test_who = 'dnet' #network to test: n1, n2, n3 (experts), dnet (gating)
 test_onwhom = [None] #environment type to test on: [0], [1], [2], [None] (random), or random choice from 2 envs e.g. [0,1]
-use_random_e = False
-getnumep = 1000 #about 100 of each env type for testing
+use_random_e = False #option to use random expert instead of letting gating network decide
+getnumep = 1000 #number of episodes to test on
 TO_TRAIN = 'DNET' #Experts_n1, Experts_n2, Experts_n3, DNET, DNETAllExpert
-TrainNewOnly = True
+TrainNewOnly = True #option to train all experts simultaneous or only the newly added expert network
 WHICH_DNET = '3e' # '2e' if training with just n1 and n2; '3e' if training with all 3 experts
 
 the_test_worker = worker(name='_testman',trainer=TRAINER,actorenv=test_onwhom)
@@ -1393,8 +1393,6 @@ the_test_worker = worker(name='_testman',trainer=TRAINER,actorenv=test_onwhom)
 # create the tf.Session
 UGPU = str(sys.argv[5])
 with tf.Session(config=tf.ConfigProto(gpu_options=set_gpu(UGPU, .2))) as sess:
-# with tf.Session(config=tf.ConfigProto(gpu_options=set_gpu('0', .2))) as sess:
-# with tf.Session() as sess:
 	#load(aka restore) network or initialize new one
 	if dorestore == True:
 		saver.restore(sess,restorepath)
@@ -1459,14 +1457,12 @@ with tf.Session(config=tf.ConfigProto(gpu_options=set_gpu(UGPU, .2))) as sess:
 			coord.join(dneworker_threads) #pass the worker threads to the coordinator that will apply join to them
 										#i.e. wait for them to finish
 
-
 		#if saving network, save
 		if dosave == True:
 			save_path = saver.save(sess, savepath)
 			print("saved to " + savepath)
 
-		#once the network is trained:
-		#create a new worker to test it out
+		#once the network is trained: create a new worker to test it out
 		if testnetwork == True:
 			the_test_worker.test(sess=sess,testdatapath=testdatapath,getnumep=getnumep)
 
