@@ -1263,7 +1263,7 @@ else:
 #sys.argv[8] - eighth arg is carddeck: 0 is fulldeck; 1 is MWCST deck (no ambiguous cards)
 #sys.argv[9] - ninth arg is run number: 0
 #
-#	python3 DynaMoE_LESION.py [NETSZ_D] [NETSZ_E] [TRAIN_ENV] [EPS_TO_TRAIN_ON] [GPU] [LTYPE] [P_ABL] [CARDDECK] [RUNNO]
+#	python3 DynaMoE_lesion.py [NETSZ_D] [NETSZ_E] [TRAIN_ENV] [EPS_TO_TRAIN_ON] [GPU] [LTYPE] [P_ABL] [CARDDECK] [RUNNO]
 
 LTYPE = int(sys.argv[6]) #Lesion type: 0=no_lesion,
 	#impaired input to gate: 1=gate_no_rt-1, 2=gate_no_at-1, 3=gate_no_art-1
