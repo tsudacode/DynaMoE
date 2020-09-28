@@ -15,12 +15,9 @@ from python_modules import WCST_env as We #need env file ('WCST_env.py'); here i
 def set_gpu(gpu, frac):
     """
     Function to specify which GPU to use
-
     gpu: string for gpu (i.e. '0')
     frac: memory fraction (i.e. 0.3 for 30%)
-
     returns tf sess config
-
     example usage:
     	sess = tf.Session(config=tf.ConfigProto(gpu_options=set_gpu('0', 0.5)))
     """
