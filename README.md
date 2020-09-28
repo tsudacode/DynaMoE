@@ -21,7 +21,8 @@ Organization of Dynamoe_LESION.py is
       - creation of testing workers
       - script to deploy workers for training AND testing
 
-Created with Wisconsin Card Sorting Task environment  
+Created with Wisconsin Card Sorting Task environment which loads from  
+`WCST_env.py`
 
 **For lesion studies**  
 Loads a network that was trained sequentially on shape&rarr;color&rarr;number with new expert network added in each sort rule (n1&rarr;n2&rarr;n3), then gating network (dnet) was trained on classic interleaved WCST with all experts present.  
