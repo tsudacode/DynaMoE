@@ -1253,17 +1253,17 @@ tf.reset_default_graph()
 #sys.argv[2] - second arg is the expert network size: 19
 #sys.argv[3] - third arg is the env_train_on: 0, 1, 2, None
 if str(sys.argv[3])=='None':
-	trainenv = None
+	TRAIN_ENV = None
 else:
-	trainenv = int(sys.argv[3])
-#sys.argv[4] - fourth arg is the #ep to train on: 100
-#sys.argv[5] - fifth arg is gpu to use: 0
+	TRAIN_ENV = int(sys.argv[3])
+#sys.argv[4] - fourth arg is the #ep to train on, e.g. 3000
+#sys.argv[5] - fifth arg is gpu to use (if multiple to choose from): 0
 #sys.argv[6] - sixth arg is lesion type: 0 (no lesion), 1-12
-#sys.argv[7] - seventh arg is degree of ablation or knockdown in lesions: 0
-#sys.argv[8] - eighth arg is carddeck: 0
-#sys.argv[9] - ninth arg is runnumber: 0
+#sys.argv[7] - seventh arg is degree of ablation or knockdown in lesions: [0.0-1.0]
+#sys.argv[8] - eighth arg is carddeck: 0 is fulldeck; 1 is MWCST deck (no ambiguous cards)
+#sys.argv[9] - ninth arg is run number: 0
 #
-#	python3 DynaMoE_LESION.py [NETSZ_D] [NETSZ_E] [trainenv] [EPS_TO_TRAIN_ON] [GPU] [LTYPE] [p_abl] [carddeck] [runnum]
+#	python3 DynaMoE_LESION.py [NETSZ_D] [NETSZ_E] [TRAIN_ENV] [EPS_TO_TRAIN_ON] [GPU] [LTYPE] [P_ABL] [CARDDECK] [RUNNO]
 
 LTYPE = int(sys.argv[6]) #Lesion type: 0=no_lesion,
 	#impaired input to gate: 1=gate_no_rt-1, 2=gate_no_at-1, 3=gate_no_art-1
@@ -1272,8 +1272,8 @@ LTYPE = int(sys.argv[6]) #Lesion type: 0=no_lesion,
 	#impaired value connections: 6,10=v_mask
 	#impaired policy connections: 8,10=pi_mask
 	#impaired network dynamics (forget gate connections ablation): 12=forget_gate
-p_abl = float(sys.argv[7]) #degree of ablation or knockdown
-runnum = int(sys.argv[9])
+P_ABL = float(sys.argv[7]) #degree of ablation or knockdown
+RUNNO = int(sys.argv[9])
 
 GLOBAL_EPISODE_COUNTER = 0
 TRAIN_EP_COUNT = 0
@@ -1283,9 +1283,9 @@ TRAINER = tf.train.AdamOptimizer(learning_rate=1e-3)
 GAMMA = 0
 NUMBER_OF_WORKERS = 12
 RNDMSD = None
-useFD = int(sys.argv[8]) #carddeck -- 0 is fulldeck; 1 is MWCST deck (no ambiguous cards)
+useFD = int(sys.argv[8]) #CARDDECK -- 0 is fulldeck; 1 is MWCST deck (no ambiguous cards)
 NUM_TRAIN_EPS = 0
-dw_env_train = [trainenv]
+dw_env_train = [TRAIN_ENV]
 
 train_assesser_on = True
 avecorthresh = 4 #4; ave performance threshold to assess for stopping training
@@ -1301,28 +1301,28 @@ STATE_SPACE = We.get_state_space() #size of state space
 ACTION_SPACE = We.get_action_space() #size of action space
 
 if LTYPE==4: #ablate some percentage of output cells
-	rnnout_Lm = np.random.choice(2,NETSZ_D,p=[p_abl, (1-p_abl)]) #p=[0.1,0.9] means 10% chance a given unit's output to policy and value layers is ablated; ablation mask set and held constant from beginning
+	rnnout_Lm = np.random.choice(2,NETSZ_D,p=[P_ABL, (1-P_ABL)]) #p=[0.1,0.9] means 10% chance a given unit's output to policy and value layers is ablated; ablation mask set and held constant from beginning
 elif LTYPE==5:
-	rnnout_Lm = np.ones(NETSZ_D) * p_abl #amount output is muted
+	rnnout_Lm = np.ones(NETSZ_D) * P_ABL #amount output is muted
 else:
 	rnnout_Lm = np.ones(NETSZ_D) #no change to output units
 
 if (LTYPE==6) | (LTYPE==10): 
-	v_mask = np.random.choice(2,[NETSZ_D,1],p=[p_abl,(1-p_abl)]) #p_abl likelihood a given connection from output to pi layer is dropped
+	v_mask = np.random.choice(2,[NETSZ_D,1],p=[P_ABL,(1-P_ABL)]) #P_ABL likelihood a given connection from output to pi layer is dropped
 elif (LTYPE==7) | (LTYPE==11):
-	v_mask = np.ones([NETSZ_D,1]) * p_abl
+	v_mask = np.ones([NETSZ_D,1]) * P_ABL
 else:
 	v_mask = np.ones([NETSZ_D,1])
 
 if (LTYPE==8) | (LTYPE==10):
-	pi_mask = np.random.choice(2,[NETSZ_D,3],p=[p_abl,(1-p_abl)])
+	pi_mask = np.random.choice(2,[NETSZ_D,3],p=[P_ABL,(1-P_ABL)])
 elif (LTYPE==9) | (LTYPE==11):
-	pi_mask = np.ones([NETSZ_D,3]) * p_abl
+	pi_mask = np.ones([NETSZ_D,3]) * P_ABL
 else:
 	pi_mask = np.ones([NETSZ_D,3])
 
 if LTYPE==12: #ablate connections between input and forget gate
-	input_w_mask = np.concatenate((np.ones([STATE_SPACE+NETSZ_D,NETSZ_D*2]),np.random.choice(2,[STATE_SPACE+NETSZ_D,NETSZ_D],p=[p_abl,(1-p_abl)]),np.ones([STATE_SPACE+NETSZ_D,NETSZ_D])),axis=1)
+	input_w_mask = np.concatenate((np.ones([STATE_SPACE+NETSZ_D,NETSZ_D*2]),np.random.choice(2,[STATE_SPACE+NETSZ_D,NETSZ_D],p=[P_ABL,(1-P_ABL)]),np.ones([STATE_SPACE+NETSZ_D,NETSZ_D])),axis=1)
 else:
 	input_w_mask = np.ones([STATE_SPACE+NETSZ_D,NETSZ_D*4])
 	
