@@ -7,7 +7,7 @@ https://www.biorxiv.org/content/10.1101/2020.03.11.984757v1
 Rough version of single gating network with 1-3 expert networks
 
 Trains by reinforcement learning with A3C training algorithm of Minh et al. 2016: http://proceedings.mlr.press/v48/mniha16.pdf  
-Organization of Dynamoe_LESION.py is
+Organization of DynaMoE_lesion.py is
   - helper fxns
   - definition of network class
   - definition of worker class
@@ -21,8 +21,7 @@ Organization of Dynamoe_LESION.py is
       - creation of testing workers
       - script to deploy workers for training AND testing
 
-Created with Wisconsin Card Sorting Task environment which loads from  
-`WCST_env.py`
+Created with Wisconsin Card Sorting Task environment which loads from WCST_env.py  
 
 **For lesion studies**  
 Loads a network that was trained sequentially on shape&rarr;color&rarr;number with new expert network added in each sort rule (n1&rarr;n2&rarr;n3), then gating network (dnet) was trained on classic interleaved WCST with all experts present.  
