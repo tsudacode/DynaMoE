@@ -36,7 +36,7 @@ If you use this repo in your research, please cite:
 
     @article{Tsuda_2020,
     Author = {Tsuda, Ben and Tye, Kay M. and Siegelmann, Hava T. and Sejnowski, Terrence J.},  
-    Journal = {bioRxiv},  
-    Doi = {10.1101/2020.03.11.984757},  
+    Journal = {Proceedings of the National Academy of Sciences},  
+    Doi = {10.1073/pnas.2009591117},  
     Title = {A modeling framework for adaptive lifelong learning with transfer and savings through gating in the prefrontal cortex},  
     Year = {2020}}
