@@ -38,5 +38,6 @@ If you use this repo in your research, please cite:
     Author = {Tsuda, Ben and Tye, Kay M. and Siegelmann, Hava T. and Sejnowski, Terrence J.},  
     Title = {A modeling framework for adaptive lifelong learning with transfer and savings through gating in the prefrontal cortex},  
     Journal = {Proceedings of the National Academy of Sciences},  
+    Publisher = {National Academy of Sciences},  
     Doi = {10.1073/pnas.2009591117},  
     Year = {2020}}
