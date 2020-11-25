@@ -1,7 +1,7 @@
 # DynaMoE
 
 Model from:  
-Tsuda B, Tye KM, Siegelmann HT, Sejnowski TJ. *A modeling framework for adaptive lifelong learning with transfer and savings through gating in the prefrontal cortex.* Proceedings of the National Academy of Sciences, 117 (47), 29872--29882, 2020.
+Tsuda B, Tye KM, Siegelmann HT, Sejnowski TJ. *A modeling framework for adaptive lifelong learning with transfer and savings through gating in the prefrontal cortex.* Proceedings of the National Academy of Sciences, 117 (47), 29872-29882, 2020.
 https://doi.org/10.1073/pnas.2009591117
 
 Rough version of single gating network with 1-3 expert networks
