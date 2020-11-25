@@ -39,5 +39,8 @@ If you use this repo in your research, please cite:
     Title = {A modeling framework for adaptive lifelong learning with transfer and savings through gating in the prefrontal cortex},  
     Journal = {Proceedings of the National Academy of Sciences},  
     Publisher = {National Academy of Sciences},  
+    Volume = {117},  
+    Number = {47},  
+    Pages = {29872--29882},  
     Doi = {10.1073/pnas.2009591117},  
     Year = {2020}}
